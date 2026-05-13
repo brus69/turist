@@ -92,6 +92,21 @@ def unsplash_photo_url(photo_id: str, width: int = 800, height: int = 520) -> st
     return f"https://images.unsplash.com/photo-{pid}?auto=format&fit=crop&w={w}&h={h}&q=80"
 
 
+class Region(models.Model):
+    """Географический регион (один на тур). Имя совпадает с GET-параметром каталога ``region=``."""
+
+    name = models.CharField("Название", max_length=200, unique=True)
+    order = models.PositiveSmallIntegerField("Порядок в списках", default=0)
+
+    class Meta:
+        ordering = ["order", "name"]
+        verbose_name = "Регион"
+        verbose_name_plural = "Регионы"
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Season(models.Model):
     """Справочник сезонов (код совпадает с GET-параметром каталога `season=`)."""
 
@@ -129,7 +144,12 @@ class Tour(models.Model):
 
     slug = models.SlugField("Слаг (URL)", max_length=120, unique=True, db_index=True)
     title = models.CharField("Название", max_length=512)
-    region = models.CharField("Регион", max_length=200)
+    region = models.ForeignKey(
+        Region,
+        on_delete=models.PROTECT,
+        related_name="tours",
+        verbose_name="Регион",
+    )
     country = models.CharField("Страна", max_length=120, default="Россия")
     activity_type = models.CharField("Тип активности (текст)", max_length=200)
     activity_kind = models.CharField(

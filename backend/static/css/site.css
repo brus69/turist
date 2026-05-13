@@ -614,39 +614,6 @@ a:hover {
   padding-left: 1.2rem;
 }
 
-/* Cabinet */
-.cabinet-grid {
-  display: grid;
-  gap: 24px;
-}
-@media (min-width: 768px) {
-  .cabinet-grid {
-    grid-template-columns: 220px 1fr;
-  }
-}
-.cabinet-nav {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 8px;
-  background: #fff;
-}
-.cabinet-nav a {
-  display: block;
-  padding: 10px 12px;
-  border-radius: 8px;
-  color: var(--color-text);
-  font-weight: 500;
-}
-.cabinet-nav a:hover {
-  background: var(--color-bg);
-  text-decoration: none;
-}
-.cabinet-nav a.is-active {
-  background: #fff7ed;
-  color: var(--color-orange-dark);
-  font-weight: 700;
-}
-
 .muted {
   color: var(--color-muted);
 }

@@ -1,6 +1,6 @@
 # Туристический агрегатор
 
-Сайт отдаётся **одним приложением Django** (HTML-шаблоны + статика). Каталог **`frontend/`** сохранён как **архив** прежней вёрстки на Next.js/React и **не требуется** для запуска.
+Сайт — **одно приложение Django**: HTML-шаблоны, статика, SQLite (или PostgreSQL в production по настройкам). Отдельного фронтенд-репозитория или Node.js для запуска не требуется.
 
 ## Требования
 
@@ -19,9 +19,15 @@ python manage.py runserver 8000
 
 Открыть в браузере: `http://127.0.0.1:8000/`
 
-Подробности и список URL: [backend/README.md](backend/README.md).
+Подробности, URL и переменные окружения: [backend/README.md](backend/README.md).
 
-## Структура
+## Структура репозитория
 
-- `backend/` — Django: модели туров, шаблоны в `backend/templates/`, CSS в `backend/static/css/`
-- `frontend/` — архив (Next.js + Mantine), не используется в продакшен-потоке проекта
+| Каталог / файлы | Назначение |
+|-----------------|------------|
+| `backend/` | Проект Django: приложение `tours`, шаблоны, статика, `manage.py` |
+| `backend/templates/` | Шаблоны страниц (`home.html`, `tours/`, `partials/`, `base.html`) |
+| `backend/static/` | CSS, JS, общие ресурсы сайта |
+| `AGENTS.md` | Краткое ТЗ по страницам для ассистента |
+
+Правила для ИИ в Cursor: см. [AGENTS.md](AGENTS.md).

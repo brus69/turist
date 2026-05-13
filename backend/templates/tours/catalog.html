@@ -118,8 +118,8 @@
           </label>
           {% for r in regions %}
             <label style="display:block;margin:6px 0;">
-              <input type="radio" name="region" value="{{ r }}" {% if get_params.region == r %}checked{% endif %}>
-              {{ r }}
+              <input type="radio" name="region" value="{{ r.name }}" {% if get_params.region == r.name %}checked{% endif %}>
+              {{ r.name }}
             </label>
           {% endfor %}
         </div>

@@ -32,7 +32,7 @@ def filter_tours(qs: QuerySet[Tour], params: dict[str, str]) -> list[Tour]:
 
     region = params.get("region")
     if region:
-        qs = qs.filter(Q(region=region) | Q(country=region))
+        qs = qs.filter(Q(region__name=region) | Q(country=region))
 
     activity = params.get("activity")
     kinds = {"hike", "kayak", "horse", "mountain"}

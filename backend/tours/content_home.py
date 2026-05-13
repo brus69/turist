@@ -1,4 +1,7 @@
-"""Статический контент главной и фильтров (перенос из frontend/src/data)."""
+"""Статический контент главной и фильтров (активности, статьи, отзывы и т.д.).
+
+Регионы для сайта и каталога — модель ``Region`` в БД (см. админку / сиды).
+"""
 
 from __future__ import annotations
 
@@ -10,15 +13,6 @@ def picsum_image(seed: str, width: int, height: int) -> str:
     w, h = max(16, min(width, 2000)), max(16, min(height, 2000))
     return f"https://picsum.photos/seed/{quote(safe, safe='')}/{w}/{h}"
 
-
-REGIONS = [
-    "Россия",
-    "Карелия и Ленобласть",
-    "Алтай",
-    "Кавказ",
-    "Байкал",
-    "Архангельская область",
-]
 
 ACTIVITIES = [
     {"value": "hike", "label": "Пешие походы"},
@@ -133,14 +127,6 @@ HEADER_NAV = [
     {"label": "Типы туров", "href": "/tours/?view=types"},
     {"label": "Отзывы", "href": "/#reviews"},
     {"label": "Информация", "href": "/#info"},
-]
-
-CABINET_LINKS = [
-    {"href": "/cabinet/", "label": "Обзор"},
-    {"href": "/cabinet/calendar/", "label": "Календарь"},
-    {"href": "/cabinet/routes/", "label": "Маршруты"},
-    {"href": "/cabinet/media/", "label": "Фото"},
-    {"href": "/cabinet/create-tour/", "label": "Создать тур"},
 ]
 
 

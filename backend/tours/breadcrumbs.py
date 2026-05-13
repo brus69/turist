@@ -16,7 +16,8 @@ def tour_breadcrumb_links(tour: Tour) -> list[dict[str, str]]:
     links: list[dict[str, str]] = [{"label": "Главная", "href": reverse("home")}]
     base = reverse("tour-catalog")
     country = (tour.country or "").strip()
-    region = (tour.region or "").strip()
+    reg = getattr(tour, "region", None)
+    region = ((reg.name if reg is not None else "") or "").strip()
     if country:
         links.append({"label": country, "href": f"{base}?region={quote(country)}"})
     if region and region != country:

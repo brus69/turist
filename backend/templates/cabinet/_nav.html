@@ -1,5 +1,0 @@
-<nav class="cabinet-nav" aria-label="Личный кабинет">
-  {% for link in cabinet_links %}
-    <a href="{{ link.href }}" {% if request.path == link.href %}class="is-active"{% endif %}>{{ link.label }}</a>
-  {% endfor %}
-</nav>

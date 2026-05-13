@@ -1,6 +1,16 @@
 # Django — сайт на шаблонах
 
-Серверный HTML (Django Templates), туры в SQLite, без REST API и без отдельного Node-фронта.
+Серверный HTML (Django Templates), туры в SQLite по умолчанию. **REST API и отдельный JS/Node-фронт не используются** — весь публичный сайт рендерится Django.
+
+## Структура `backend/`
+
+| Путь | Назначение |
+|------|------------|
+| `config/` | Настройки (`settings`, корневые `urls`) |
+| `tours/` | Модели туров, админка, фильтры каталога, представления, сиды |
+| `templates/` | Шаблоны (`base.html`, `home.html`, `tours/`, `partials/`) |
+| `static/` | CSS (`css/site.css`), JS для календаря слотов и админки |
+| `manage.py` | Точка входа Django |
 
 ## Окружение
 
@@ -33,7 +43,6 @@ python manage.py runserver 8000
 | `/` | Главная |
 | `/tours/` | Каталог (фильтры через GET: `q`, `region`, `activity`, `from`, `to`, `priceMin`, `priceMax`, `duration`, `season`, `holiday`, `avail`, `sort`, `dir`) |
 | `/tours/<slug>/` | Карточка тура |
-| `/cabinet/` … | Личный кабинет (демо-страницы) |
 | `/admin/` | Админка Django |
 
 Переменные: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`.

@@ -70,7 +70,7 @@
     <h2>Направления</h2>
     <div class="badges-row">
       {% for r in regions %}
-        <a class="badge" href="{% url 'tour-catalog' %}?region={{ r|urlencode }}">{{ r }}</a>
+        <a class="badge" href="{% url 'tour-catalog' %}?region={{ r.name|urlencode }}">{{ r.name }}</a>
       {% endfor %}
     </div>
   </div>

@@ -1,17 +1,26 @@
 from datetime import date
 
-from django.test import SimpleTestCase, TestCase
+from django.test import TestCase
 
 from .breadcrumbs import tour_breadcrumb_links
 from .filters import filter_tours
-from .models import DurationCategory, Season, Tour, TourDateSlot, date_summary_from_slots, first_start_date_from_slots
+from .models import (
+    DurationCategory,
+    Region,
+    Season,
+    Tour,
+    TourDateSlot,
+    date_summary_from_slots,
+    first_start_date_from_slots,
+)
 
 
 def _minimal_tour_kwargs(slug: str, **extra):
+    reg, _ = Region.objects.get_or_create(name="Тестовый регион", defaults={"order": 900})
     base = {
         "slug": slug,
         "title": "Тестовый тур",
-        "region": "Тестовый регион",
+        "region": reg,
         "country": "Россия",
         "activity_type": "Пешие походы",
         "activity_kind": "hike",
@@ -26,12 +35,13 @@ def _minimal_tour_kwargs(slug: str, **extra):
     return base
 
 
-class TourBreadcrumbLinksTests(SimpleTestCase):
+class TourBreadcrumbLinksTests(TestCase):
     def test_links_home_country_region(self):
+        r, _ = Region.objects.get_or_create(name="Карелия и Ленобласть", defaults={"order": 1})
         t = Tour(
             slug="x",
             title="T",
-            region="Карелия и Ленобласть",
+            region=r,
             country="Россия",
             activity_type="Пешие",
             activity_kind="hike",
@@ -46,10 +56,11 @@ class TourBreadcrumbLinksTests(SimpleTestCase):
         self.assertIn("Карелия и Ленобласть", labels)
 
     def test_same_region_as_country_skips_duplicate(self):
+        r, _ = Region.objects.get_or_create(name="Россия", defaults={"order": 0})
         t = Tour(
             slug="x",
             title="T",
-            region="Россия",
+            region=r,
             country="Россия",
             activity_type="Пешие",
             activity_kind="hike",
@@ -135,3 +146,7 @@ class FilterToursOrmTests(TestCase):
     def test_filter_duration(self):
         out = filter_tours(Tour.objects.all(), {"duration": "weekend"})
         self.assertEqual({t.slug for t in out}, {"f-b"})
+
+    def test_filter_region_by_name(self):
+        out = filter_tours(Tour.objects.all(), {"region": "Тестовый регион"})
+        self.assertEqual({t.slug for t in out}, {"f-a", "f-b"})

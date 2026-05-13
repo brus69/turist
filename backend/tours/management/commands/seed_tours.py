@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from tours.models import (
     DurationCategory,
     Instructor,
+    Region,
     Season,
     Tour,
     TourExcludedItem,
@@ -13,11 +14,12 @@ from tours.models import (
     TourPackingItem,
     TourProgramDay,
 )
-from tours.seed_data import SEED_TOURS
+from tours.seed_data import SEED_TOURS, region_order_for_seed
 
 _SEED_SKIP_KEYS = frozenset(
     {
         "slug",
+        "region",
         "season",
         "duration_category",
         "instructors",
@@ -135,6 +137,13 @@ class Command(BaseCommand):
                 for k, v in row.items()
                 if k not in _SEED_SKIP_KEYS and k in _SEED_ALLOWED_KEYS
             }
+            rraw = row.get("region")
+            if isinstance(rraw, str) and rraw.strip():
+                reg, _ = Region.objects.get_or_create(
+                    name=rraw.strip(),
+                    defaults={"order": region_order_for_seed(rraw.strip())},
+                )
+                defaults["region"] = reg
             tour, _ = Tour.objects.update_or_create(slug=slug, defaults=defaults)
             _sync_tour_season_and_duration_from_row(tour, row)
             _sync_tour_lists_from_row(tour, row)

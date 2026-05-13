@@ -21,7 +21,6 @@
       </nav>
       <div class="site-header__right">
         <span class="muted" style="font-size:0.9rem;">Поиск</span>
-        <a href="{% url 'cabinet-dashboard' %}" {% if request.path|slice:':8' == '/cabinet' %}style="font-weight:700;color:var(--color-orange-dark);"{% endif %}>Личный кабинет</a>
         <span class="site-header__phone">8 (800) 200-2456</span>
       </div>
     </div>
@@ -41,7 +40,6 @@
         <p class="footer-title">Туры</p>
         <p><a href="{% url 'tour-catalog' %}">Каталог</a></p>
         <p><a href="{% url 'tour-catalog' %}?region={{ 'Карелия и Ленобласть'|urlencode }}">Карелия и Ленобласть</a></p>
-        <p><a href="{% url 'cabinet-dashboard' %}">Личный кабинет</a></p>
       </div>
       <div>
         <p class="footer-title">Клиентам</p>

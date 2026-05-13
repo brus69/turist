@@ -1,4 +1,4 @@
-# Repo root — Python/Django (см. также frontend/.gitignore)
+# Корень репозитория — Django (см. backend/)
 backend/venv/
 backend/.venv/
 __pycache__/

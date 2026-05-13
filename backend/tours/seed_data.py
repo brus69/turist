@@ -1,10 +1,27 @@
-"""Данные для python manage.py seed_tours (совместимо с фронтом).
+"""Данные для ``python manage.py seed_tours``.
 
 Галереи туров — демо-кадры с Unsplash (travel / природа). Прямые ссылки на iStock без
 лицензии в репозиторий не включаем; при покупке материалов подставьте свои URL в ``images``.
 """
 
 from .models import unsplash_photo_url as img
+
+# Порядок регионов в списках на сайте (остальные получают порядок после этого блока).
+REGION_DISPLAY_ORDER = (
+    "Россия",
+    "Карелия и Ленобласть",
+    "Алтай",
+    "Кавказ",
+    "Байкал",
+    "Архангельская область",
+)
+
+
+def region_order_for_seed(name: str) -> int:
+    try:
+        return REGION_DISPLAY_ORDER.index(name)
+    except ValueError:
+        return len(REGION_DISPLAY_ORDER) + abs(hash(name)) % 1000
 
 
 def _slots(*items):

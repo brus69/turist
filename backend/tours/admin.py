@@ -4,6 +4,7 @@ from .forms import TourAdminForm
 from .models import (
     DurationCategory,
     Instructor,
+    Region,
     Season,
     Tour,
     TourExcludedItem,
@@ -14,6 +15,14 @@ from .models import (
     TourPackingItem,
     TourProgramDay,
 )
+
+
+@admin.register(Region)
+class RegionAdmin(admin.ModelAdmin):
+    list_display = ("name", "order")
+    list_editable = ("order",)
+    ordering = ("order", "name")
+    search_fields = ("name",)
 
 
 @admin.register(DurationCategory)
@@ -102,7 +111,7 @@ class TourAdmin(admin.ModelAdmin):
     )
     list_display = ("id", "slug", "title", "region", "season", "duration_category", "price", "activity_kind", "difficulty")
     list_display_links = ("id", "slug", "title")
-    search_fields = ("title", "slug", "region")
+    search_fields = ("title", "slug", "region__name")
     list_filter = ("region", "activity_kind", "difficulty", "country")
     ordering = ("id",)
 

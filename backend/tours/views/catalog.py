@@ -7,13 +7,13 @@ from ..content_home import (
     ACTIVITIES,
     DIFFICULTY_LABELS,
     HOLIDAYS,
-    REGIONS,
     reviews_for_tour,
 )
 from ..breadcrumbs import tour_breadcrumb_links
 from ..filters import filter_tours
 from ..models import (
     DurationCategory,
+    Region,
     Season,
     Tour,
     TourExcludedItem,
@@ -30,7 +30,7 @@ from .common import filter_params_from_request
 def tour_catalog(request):
     params = filter_params_from_request(request)
     tours = filter_tours(
-        Tour.objects.select_related("season", "duration_category").prefetch_related("gallery_images"),
+        Tour.objects.select_related("region", "season", "duration_category").prefetch_related("gallery_images"),
         params,
     )
     dur_sel = [x for x in (params.get("duration") or "").split(",") if x]
@@ -45,7 +45,7 @@ def tour_catalog(request):
             "duration_selected": dur_sel,
             "season_selected": season_sel,
             "holiday_selected": hol_sel,
-            "regions": REGIONS,
+            "regions": Region.objects.all(),
             "activities": ACTIVITIES,
             "duration_filters": DurationCategory.objects.all(),
             "seasons": Season.objects.all(),
@@ -55,7 +55,7 @@ def tour_catalog(request):
 
 
 def tour_detail(request, slug: str):
-    qs = Tour.objects.select_related("season", "duration_category").prefetch_related(
+    qs = Tour.objects.select_related("region", "season", "duration_category").prefetch_related(
         Prefetch(
             "instructor_links",
             queryset=TourInstructor.objects.select_related("instructor").order_by("order", "id"),
