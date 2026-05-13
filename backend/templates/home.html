@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Главная{% endblock %}
+{% block content %}
+<section class="hero" style="background-image:url('{{ hero_bg }}');">
+  <div class="container">
+    <h1>Путешествия по России и миру</h1>
+    <form class="hero-card" method="get" action="{% url 'tour-catalog' %}">
+      <div class="hero-grid">
+        <div class="field">
+          <label for="when">Когда</label>
+          <input id="when" name="from" type="date" value="{{ request.GET.from|default:'' }}">
+        </div>
+        <div class="field">
+          <label for="where">Куда</label>
+          <input id="where" name="q" type="text" placeholder="Регион или название" value="{{ request.GET.q|default:'' }}">
+        </div>
+        <div class="field">
+          <label for="act">Вид активности</label>
+          <select id="act" name="activity">
+            <option value="">Любой</option>
+            {% for a in activities %}
+              <option value="{{ a.value }}" {% if request.GET.activity == a.value %}selected{% endif %}>{{ a.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="hero-actions field">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn btn--primary">Выбрать тур</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="section section--muted">
+  <div class="container">
+    <h2>Ближайшие даты</h2>
+    {% if upcoming_tours %}
+      <div class="scroller">
+        {% for t in upcoming_tours %}
+          <a class="card-mini" href="{% url 'tour-detail' t.slug %}">
+            <h3>{{ t.title }}</h3>
+            <div class="muted">{{ t.date_summary }}</div>
+            <div class="price">{{ t.price }} ₽</div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">Туры появятся после загрузки данных (<code>python manage.py seed_tours</code>).</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Виды активности</h2>
+    <div class="grid-activities">
+      {% for a in activities %}
+        <a class="activity-card" href="{% url 'tour-catalog' %}?activity={{ a.value }}">
+          <strong>{{ a.label }}</strong>
+          <p class="muted mt-sm" style="font-size:0.875rem;">Смотреть туры</p>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--muted">
+  <div class="container">
+    <h2>Направления</h2>
+    <div class="badges-row">
+      {% for r in regions %}
+        <a class="badge" href="{% url 'tour-catalog' %}?region={{ r|urlencode }}">{{ r }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>Фото поездок</h2>
+    <div class="photo-strip">
+      {% for p in trip_photos %}
+        <img src="{{ p.src }}" alt="{{ p.alt }}" width="280" height="180" loading="lazy">
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--muted" id="info">
+  <div class="container">
+    <h2>Почему мы</h2>
+    <div class="why-grid">
+      {% for item in why_us %}
+        <div>
+          <strong>{{ item.title }}</strong>
+          <p class="muted mt-sm" style="font-size:0.9rem;">{{ item.text }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section" id="reviews">
+  <div class="container">
+    <h2>Отзывы</h2>
+    <div class="reviews-grid">
+      {% for r in reviews %}
+        <div class="review-card">
+          <strong>{{ r.author }}</strong>
+          <p class="muted" style="font-size:0.8rem;">{{ r.rating }} / 5</p>
+          <p class="mt-sm" style="font-size:0.9rem;">{{ r.text }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--muted">
+  <div class="container">
+    <h2>Статьи</h2>
+    <div class="articles-grid">
+      {% for a in articles %}
+        <article class="article-card">
+          <a href="{{ a.href }}">
+            <img src="{{ a.image }}" alt="" width="900" height="540" loading="lazy">
+            <div class="body">
+              <strong>{{ a.title }}</strong>
+              <p class="muted mt-sm" style="font-size:0.875rem;">{{ a.excerpt }}</p>
+            </div>
+          </a>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

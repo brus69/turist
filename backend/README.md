@@ -1,4 +1,6 @@
-# Django API (туры)
+# Django — сайт на шаблонах
+
+Серверный HTML (Django Templates), туры в SQLite, без REST API и без отдельного Node-фронта.
 
 ## Окружение
 
@@ -9,10 +11,9 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## База и данные
+## База и демо-данные
 
 ```bash
-python manage.py makemigrations tours
 python manage.py migrate
 python manage.py seed_tours
 ```
@@ -23,7 +24,18 @@ python manage.py seed_tours
 python manage.py runserver 8000
 ```
 
-- Список туров: `GET http://127.0.0.1:8000/api/tours/` (query-параметры как в URL каталога на фронте: `q`, `region`, `activity`, `from`, `to`, `priceMin`, `priceMax`, `duration`, `season`, `holiday`, `avail`, `sort`, `dir`).
-- Карточка: `GET http://127.0.0.1:8000/api/tours/<slug>/`
+Открыть: `http://127.0.0.1:8000/`
 
-Переменные: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `CORS_ALLOWED_ORIGINS` (через запятую, по умолчанию localhost/127.0.0.1 на портах 3000 и 3054).
+## Страницы (URL)
+
+| URL | Описание |
+|-----|----------|
+| `/` | Главная |
+| `/tours/` | Каталог (фильтры через GET: `q`, `region`, `activity`, `from`, `to`, `priceMin`, `priceMax`, `duration`, `season`, `holiday`, `avail`, `sort`, `dir`) |
+| `/tours/<slug>/` | Карточка тура |
+| `/cabinet/` … | Личный кабинет (демо-страницы) |
+| `/admin/` | Админка Django |
+
+Переменные: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`.
+
+Статика разработки: `STATICFILES_DIRS` → `backend/static/`. Для production: `collectstatic` и раздача через веб-сервер.

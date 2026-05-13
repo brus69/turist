@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ТурЭкоКлуб{% endblock %} — агрегатор походов</title>
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="layout">
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="site-logo" href="{% url 'home' %}">ТурЭкоКлуб</a>
+      <nav class="site-nav" aria-label="Основное меню">
+        {% for item in HEADER_NAV %}
+          <a href="{{ item.href }}"
+            {% if item.href == '/tours/' and request.path == '/tours/' %}class="is-active"{% endif %}
+          >{{ item.label }}</a>
+        {% endfor %}
+      </nav>
+      <div class="site-header__right">
+        <span class="muted" style="font-size:0.9rem;">Поиск</span>
+        <a href="{% url 'cabinet-dashboard' %}" {% if request.path|slice:':8' == '/cabinet' %}style="font-weight:700;color:var(--color-orange-dark);"{% endif %}>Личный кабинет</a>
+        <span class="site-header__phone">8 (800) 200-2456</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <div>
+        <p class="footer-title">ТурЭкоКлуб</p>
+        <p>Агрегатор походов и активного отдыха по России.</p>
+      </div>
+      <div>
+        <p class="footer-title">Туры</p>
+        <p><a href="{% url 'tour-catalog' %}">Каталог</a></p>
+        <p><a href="{% url 'tour-catalog' %}?region={{ 'Карелия и Ленобласть'|urlencode }}">Карелия и Ленобласть</a></p>
+        <p><a href="{% url 'cabinet-dashboard' %}">Личный кабинет</a></p>
+      </div>
+      <div>
+        <p class="footer-title">Клиентам</p>
+        <p><a href="{% url 'home' %}#reviews">Отзывы</a></p>
+        <p><a href="{% url 'home' %}#info">О сервисе</a></p>
+      </div>
+      <div>
+        <p class="footer-title">Контакты</p>
+        <p>8 (800) 200-2456</p>
+        <p>Ежедневно 9:00–21:00</p>
+      </div>
+    </div>
+    <div class="container site-footer__bottom">
+      © {% now "Y" %} Туристический агрегатор
+    </div>
+  </footer>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

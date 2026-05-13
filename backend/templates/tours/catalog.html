@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load catalog_tags %}
+{% block title %}Туры{% endblock %}
+{% block content %}
+<div class="container section">
+  <nav class="breadcrumbs">
+    <a href="{% url 'home' %}">Главная</a>
+    · <span>Туры</span>
+  </nav>
+
+  <h1 class="mb-md">
+    {% if get_params.region %}Походы: {{ get_params.region }}{% else %}Походы выходного дня по Карелии и Ленобласти{% endif %}
+  </h1>
+
+  <div class="catalog-layout">
+    <div class="catalog-main">
+      <div class="toolbar mb-md" style="align-items:center;">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+          <span class="muted" style="font-size:0.85rem;">Сортировка:</span>
+          <a href="{% url 'tour-catalog' %}?{% query_update sort='date' dir='asc' %}">по дате ↑</a>
+          <a href="{% url 'tour-catalog' %}?{% query_update sort='date' dir='desc' %}">по дате ↓</a>
+          <a href="{% url 'tour-catalog' %}?{% query_update sort='difficulty' dir='asc' %}">по сложности</a>
+          <a href="{% url 'tour-catalog' %}?{% query_update sort='price' dir='asc' %}">по стоимости</a>
+        </div>
+      </div>
+
+      {% if not tours %}
+        <p class="muted">Ничего не найдено — измените фильтры.</p>
+      {% else %}
+        <div class="tour-grid">
+          {% for tour in tours %}
+            {% include "partials/tour_card.html" with tour=tour %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <aside class="catalog-filters-desktop">
+      <h2 class="muted" style="font-size:1rem;margin-top:0;">Фильтры</h2>
+      <form class="filters-panel" method="get" action="{% url 'tour-catalog' %}">
+        <input type="hidden" name="sort" value="{{ get_params.sort|default:'date' }}">
+        <input type="hidden" name="dir" value="{{ get_params.dir|default:'asc' }}">
+
+        <div class="filter-block">
+          <h4>Поиск</h4>
+          <input type="search" name="q" placeholder="По названию" value="{{ get_params.q|default:'' }}" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--color-border);">
+        </div>
+
+        <div class="filter-block">
+          <h4>Длительность</h4>
+          {% for d in duration_filters %}
+            <label style="display:block;margin:6px 0;">
+              <input type="checkbox" name="duration" value="{{ d.code }}"
+                {% if d.code in duration_selected %}checked{% endif %}>
+              {{ d.name }}
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="filter-block">
+          <h4>Дата</h4>
+          <div class="filter-row">
+            <div class="field">
+              <label for="f-from">С</label>
+              <input id="f-from" type="date" name="from" value="{{ get_params.from|default:'' }}">
+            </div>
+            <div class="field">
+              <label for="f-to">По</label>
+              <input id="f-to" type="date" name="to" value="{{ get_params.to|default:'' }}">
+            </div>
+          </div>
+          <label style="display:block;margin-top:10px;">
+            <input type="checkbox" name="avail" value="1" {% if get_params.avail == '1' %}checked{% endif %}>
+            Сначала где есть места
+          </label>
+        </div>
+
+        <div class="filter-block">
+          <h4>Сезон</h4>
+          {% for s in seasons %}
+            <label style="display:block;margin:6px 0;">
+              <input type="checkbox" name="season" value="{{ s.code }}"
+                {% if s.code in season_selected %}checked{% endif %}>
+              {{ s.name }}
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="filter-block">
+          <h4>Праздники</h4>
+          {% for h in holidays %}
+            <label style="display:block;margin:6px 0;">
+              <input type="checkbox" name="holiday" value="{{ h.value }}"
+                {% if h.value in holiday_selected %}checked{% endif %}>
+              {{ h.label }}
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="filter-block">
+          <h4>Цена, ₽</h4>
+          <div class="filter-row">
+            <div class="field">
+              <label for="pmin">от</label>
+              <input id="pmin" type="number" name="priceMin" min="0" value="{{ get_params.priceMin|default:'' }}" placeholder="2000">
+            </div>
+            <div class="field">
+              <label for="pmax">до</label>
+              <input id="pmax" type="number" name="priceMax" min="0" value="{{ get_params.priceMax|default:'' }}" placeholder="200000">
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-block">
+          <h4>Направления</h4>
+          <label style="display:block;margin:6px 0;">
+            <input type="radio" name="region" value="" {% if not get_params.region %}checked{% endif %}> Все
+          </label>
+          {% for r in regions %}
+            <label style="display:block;margin:6px 0;">
+              <input type="radio" name="region" value="{{ r }}" {% if get_params.region == r %}checked{% endif %}>
+              {{ r }}
+            </label>
+          {% endfor %}
+        </div>
+
+        <div class="filter-block">
+          <h4>Активность</h4>
+          <select name="activity" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--color-border);">
+            <option value="">Любая</option>
+            {% for a in activities %}
+              <option value="{{ a.value }}" {% if get_params.activity == a.value %}selected{% endif %}>{{ a.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn--primary" style="width:100%;">Применить</button>
+      </form>
+    </aside>
+  </div>
+</div>
+{% endblock %}

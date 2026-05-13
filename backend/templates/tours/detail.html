@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ tour.title|truncatechars:60 }}{% endblock %}
+{% block content %}
+<div class="container section">
+  <nav class="breadcrumbs">
+    {% for b in breadcrumbs %}
+      <a href="{{ b.href }}">{{ b.label }}</a>
+      {% if not forloop.last %}·{% endif %}
+    {% endfor %}
+    · <span>{{ tour.title|truncatechars:40 }}</span>
+  </nav>
+
+  <div class="detail-grid">
+    <div>
+      {% with imgs=tour.gallery_images.all %}
+      <div class="detail-gallery-top {% if imgs|length > 1 %}has-thumbs{% endif %}">
+        <div class="gallery-main">
+          {% for gi in imgs %}
+            {% if forloop.first %}
+              {% if gi.url %}<img src="{{ gi.url }}" alt="" width="900" height="360" loading="eager">{% endif %}
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% if imgs|length > 1 %}
+          <div class="gallery-thumbs">
+            {% for gi in imgs %}
+              {% if forloop.counter0 > 0 and forloop.counter0 < 5 %}
+                <div class="cell">
+                  <img src="{{ gi.url }}" alt="" loading="lazy">
+                  {% if forloop.counter0 == 4 and tour.gallery_extra_photos_count %}
+                    <div class="more">+{{ tour.gallery_extra_photos_count }} фотографии</div>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      {% endwith %}
+
+      <nav class="anchor-nav mt-md" aria-label="Разделы страницы">
+        <a href="#description">Описание</a>
+        <a href="#program">План по дням</a>
+        <a href="#pricing">Стоимость</a>
+        <a href="#packing">Список вещей</a>
+        <a href="#faq">Вопросы</a>
+        <a href="#reviews">Отзывы</a>
+      </nav>
+
+      <h1 style="font-size:1.75rem;margin:16px 0;">{{ tour.title }}</h1>
+
+      <div class="badges-row mb-md">
+        {% for t in tour.tags %}<span class="badge">{{ t }}</span>{% endfor %}
+      </div>
+
+      <div class="stats-row mb-md">
+        <div class="stat"><strong>Длительность</strong>{{ tour.duration_days }} дн.</div>
+        <div class="stat"><strong>Длина</strong>{{ tour.distance_km }} км</div>
+        <div class="stat"><strong>Вес рюкзака</strong>{{ tour.backpack_weight_kg }} кг</div>
+        <div class="stat"><strong>Сложность</strong>{{ tour.difficulty_score }}/{{ tour.difficulty_max }} ({{ difficulty_label }})</div>
+        <div class="stat"><strong>Макс. мест</strong>{{ tour.max_people }} чел.</div>
+      </div>
+
+      <section id="description" class="mt-md" style="scroll-margin-top:96px;">
+        <h2>Описание</h2>
+        <p>{{ tour.description|linebreaksbr }}</p>
+      </section>
+
+      <section id="program" class="mt-md" style="scroll-margin-top:96px;">
+        <h2>План по дням</h2>
+        {% for day in tour.program_days.all %}
+          <div style="border:1px solid var(--color-border);border-radius:10px;padding:16px;margin-bottom:12px;">
+            <strong>День {{ day.day_number }}. {{ day.title }}</strong>
+            <p class="muted mt-sm">{{ day.body|linebreaksbr }}</p>
+          </div>
+        {% empty %}
+          <p class="muted">Программа уточняется.</p>
+        {% endfor %}
+      </section>
+
+      <section id="pricing" class="mt-md" style="scroll-margin-top:96px;">
+        <h2>Стоимость</h2>
+        <p><strong>{{ tour.price }} ₽</strong>{% if tour.old_price %} <s class="muted">{{ tour.old_price }} ₽</s>{% endif %}</p>
+        <p class="muted">{{ tour.currency }}</p>
+      </section>
+
+      <section id="packing" class="mt-md" style="scroll-margin-top:96px;">
+        <h2>Список вещей</h2>
+        <ul class="list-plain">
+          {% for x in tour.packing_items.all %}<li>{{ x.text }}</li>{% empty %}<li class="muted">Не указано.</li>{% endfor %}
+        </ul>
+        <h3 class="mt-md">Включено</h3>
+        <ul class="list-plain">{% for x in tour.included_items.all %}<li>{{ x.text }}</li>{% empty %}<li class="muted">—</li>{% endfor %}</ul>
+        <h3 class="mt-md">Не включено</h3>
+        <ul class="list-plain">{% for x in tour.excluded_items.all %}<li>{{ x.text }}</li>{% empty %}<li class="muted">—</li>{% endfor %}</ul>
+      </section>
+
+      <section id="faq" class="mt-md" style="scroll-margin-top:96px;">
+        <h2>Вопросы</h2>
+        {% for item in tour.faq_items.all %}
+          <div class="mt-sm">
+            <strong>{{ item.question }}</strong>
+            <p class="muted">{{ item.answer }}</p>
+          </div>
+        {% empty %}
+          <p class="muted">Нет вопросов.</p>
+        {% endfor %}
+      </section>
+
+      <section id="reviews" class="mt-md" style="scroll-margin-top:96px;">
+        <h2>Отзывы</h2>
+        <div class="reviews-grid">
+          {% for r in tour_reviews %}
+            <div class="review-card">
+              <strong>{{ r.author }}</strong>
+              <p class="muted" style="font-size:0.8rem;">{{ r.rating }} / 5</p>
+              <p class="mt-sm">{{ r.text }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <aside>
+      <div class="side-card">
+        {% if tour.status_label %}
+          <p style="font-weight:800;color:var(--color-orange);font-size:0.85rem;">{{ tour.status_label }}</p>
+        {% endif %}
+        <p class="price-big">{{ tour.price }} ₽</p>
+        {% if tour.spots_left %}<p class="muted">Осталось мест: {{ tour.spots_left }}</p>{% endif %}
+        <p class="muted mt-sm">{{ tour.date_summary }}</p>
+
+        {% if tour.season %}
+        <div class="mt-md">
+          <p class="muted" style="font-size:0.85rem;margin:0 0 4px 0;">Сезон</p>
+          <p style="margin:0;font-weight:600;">{{ tour.season.name }}</p>
+        </div>
+        {% endif %}
+
+        <form class="mt-md" id="tour-booking-form" method="get" action="#">
+          <label class="muted" style="font-size:0.85rem;display:block;margin-bottom:8px;">Дата выезда</label>
+          {% if tour.date_slots %}
+            {{ tour.date_slots|json_script:"tour-slots-data" }}
+            <div id="tour-calendar-root" class="tour-calendar" aria-live="polite"></div>
+            <input type="hidden" name="slot" id="tour-slot-id" value="">
+            <p class="tour-cal-hint muted" id="tour-cal-selection" style="font-size:0.85rem;margin-top:10px;"></p>
+          {% else %}
+            <p class="muted" style="font-size:0.85rem;">Даты уточняются.</p>
+          {% endif %}
+          <button type="button" class="btn btn--primary mt-md" style="width:100%;" disabled title="Демо">Отправить заявку</button>
+        </form>
+
+        {% for link in tour.instructor_links.all %}
+          <div class="mt-md" style="display:flex;gap:12px;align-items:center;">
+            {% if link.instructor.avatar_url %}
+              <img src="{{ link.instructor.avatar_url }}" alt="" width="56" height="56" style="border-radius:50%;object-fit:cover;">
+            {% endif %}
+            <div>
+              <strong>Инструктор</strong>
+              <div>{{ link.instructor.name }}</div>
+            </div>
+          </div>
+        {% empty %}
+          <p class="muted mt-md" style="font-size:0.85rem;">Инструкторы будут указаны позже.</p>
+        {% endfor %}
+
+      </div>
+    </aside>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if tour.date_slots %}
+<script defer src="{% static 'js/date_slot_calendar_shared.js' %}"></script>
+<script defer src="{% static 'js/tour_date_calendar.js' %}"></script>
+{% endif %}
+{% endblock %}

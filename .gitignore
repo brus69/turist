@@ -1,0 +1,9 @@
+# Repo root — Python/Django (см. также frontend/.gitignore)
+backend/venv/
+backend/.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+backend/staticfiles/
+.env
+*.egg-info/

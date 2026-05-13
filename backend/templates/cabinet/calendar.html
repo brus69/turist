@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}ЛК — Календарь{% endblock %}
+{% block content %}
+<div class="container section cabinet-grid">
+  {% include "cabinet/_nav.html" %}
+  <div>
+    <h1 style="font-size:1.35rem;">{{ cabinet_title }}</h1>
+    <p class="muted mt-sm">Планируйте выезды (локально, без сохранения).</p>
+    <div class="field mt-md" style="max-width:360px;">
+      <label for="d">Дата</label>
+      <input id="d" type="date" name="date">
+    </div>
+    <button type="button" class="btn btn--outline mt-md" disabled>Добавить напоминание</button>
+  </div>
+</div>
+{% endblock %}

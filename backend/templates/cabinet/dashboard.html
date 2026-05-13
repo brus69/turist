@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}ЛК — {{ cabinet_title }}{% endblock %}
+{% block content %}
+<div class="container section cabinet-grid">
+  {% include "cabinet/_nav.html" %}
+  <div>
+    <h1 style="font-size:1.35rem;">{{ cabinet_title }}</h1>
+    <p class="muted mt-sm">Демо-интерфейс без сохранения на сервере.</p>
+    <p class="mt-md">Здесь будет сводка по бронированиям и черновикам.</p>
+    <p class="mt-md"><a href="{% url 'cabinet-create-tour' %}">Создать тур</a></p>
+  </div>
+</div>
+{% endblock %}

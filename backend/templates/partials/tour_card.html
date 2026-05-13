@@ -1,0 +1,12 @@
+<a class="tour-card" href="{% url 'tour-detail' tour.slug %}">
+  {% with gi=tour.gallery_images.first %}
+    {% if gi %}
+      <img src="{{ gi.url }}" alt="" width="400" height="180" loading="lazy">
+    {% endif %}
+  {% endwith %}
+  <div class="body">
+    <p class="title">{{ tour.title }}</p>
+    <p class="meta">{{ tour.date_summary }}</p>
+    <p class="price">{{ tour.price }} ₽</p>
+  </div>
+</a>
