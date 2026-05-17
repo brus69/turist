@@ -7,8 +7,8 @@ from django.utils.safestring import mark_safe
 
 class DateSlotsCalendarWidget(forms.Textarea):
     """
-    JSON слотов дат + календарь и таблица редактирования (синхронизация с textarea).
-    Ожидается массив объектов: id, label, start, end (даты ISO YYYY-MM-DD).
+    JSON слотов дат + календарь и таблица: только start/end в таблице;
+    в JSON без id; подпись и ключи слотов в БД — при сохранении модели.
     """
 
     class Media:
@@ -29,7 +29,7 @@ class DateSlotsCalendarWidget(forms.Textarea):
         eid = escape(attrs.get("id", f"id_{name}"))
         html = (
             f'<div class="admin-date-slots-wrap" data-textarea-id="{eid}">'
-            '<p class="help">Редактируйте слоты в таблице. Календарь подсвечивает диапазоны слотов.</p>'
+            '<p class="help">Укажите даты начала и конца каждого слота. Подпись считается автоматически; в JSON хранятся только даты и подпись (без id).</p>'
             '<div class="admin-date-slots-cal-header">'
             '<button type="button" class="button admin-date-slots-cal-prev">‹</button>'
             '<span class="admin-date-slots-cal-title"></span>'
@@ -37,7 +37,7 @@ class DateSlotsCalendarWidget(forms.Textarea):
             "</div>"
             f'<div class="admin-date-slots-cal-root" id="{eid}_cal"></div>'
             '<table class="admin-date-slots-table"><thead><tr>'
-            "<th>id</th><th>Подпись</th><th>Начало</th><th>Конец</th><th></th>"
+            "<th>Начало</th><th>Конец</th><th>Подпись</th><th></th>"
             "</tr></thead>"
             f'<tbody id="{eid}_tbody"></tbody></table>'
             f'<p><button type="button" class="button" id="{eid}_addslot">Добавить слот</button></p>'

@@ -1,4 +1,5 @@
-<a class="tour-card" href="{% url 'tour-detail' tour.slug %}">
+<article class="tour-card">
+  <a class="tour-card__link" href="{% url 'tour-detail' tour.slug %}" aria-label="{{ tour.title|truncatechars:80 }}"></a>
   {% with gi=tour.gallery_images.first %}
     {% if gi %}
       <img src="{{ gi.url }}" alt="" width="400" height="180" loading="lazy">
@@ -7,6 +8,13 @@
   <div class="body">
     <p class="title">{{ tour.title }}</p>
     <p class="meta">{{ tour.date_summary }}</p>
+    {% if tour.tags.all %}
+      <div class="tour-card__tags">
+        {% for tag in tour.tags.all|slice:":3" %}
+          <a class="badge badge--sm" href="{% url 'tour-catalog' %}?tag={{ tag.name|urlencode }}">{{ tag.name }}</a>
+        {% endfor %}
+      </div>
+    {% endif %}
     <p class="price">{{ tour.price }} ₽</p>
   </div>
-</a>
+</article>

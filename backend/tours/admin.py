@@ -6,6 +6,7 @@ from .models import (
     Instructor,
     Region,
     Season,
+    Tag,
     Tour,
     TourExcludedItem,
     TourFaqItem,
@@ -41,10 +42,26 @@ class SeasonAdmin(admin.ModelAdmin):
     search_fields = ("code", "name")
 
 
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "tour_count")
+    search_fields = ("name",)
+    ordering = ("name",)
+
+    @admin.display(description="Туров")
+    def tour_count(self, obj: Tag) -> int:
+        return obj.tours.count()
+
+
 @admin.register(Instructor)
 class InstructorAdmin(admin.ModelAdmin):
-    list_display = ("key", "name", "avatar_url")
-    search_fields = ("key", "name")
+    list_display = ("name", "slug", "key", "avatar_url")
+    list_display_links = ("name", "slug")
+    search_fields = ("name", "slug", "key")
+    fieldsets = (
+        (None, {"fields": ("key", "slug", "name", "avatar_url")}),
+        ("Страница на сайте", {"fields": ("description",)}),
+    )
 
 
 class TourGalleryImageInline(admin.TabularInline):
@@ -57,8 +74,8 @@ class TourGalleryImageInline(admin.TabularInline):
 class TourProgramDayInline(admin.TabularInline):
     model = TourProgramDay
     extra = 0
-    ordering = ("order", "id")
-    fields = ("order", "day_number", "title", "body")
+    ordering = ("day_number", "id")
+    fields = ("day_number", "title", "body")
 
 
 class TourIncludedItemInline(admin.TabularInline):
@@ -112,7 +129,8 @@ class TourAdmin(admin.ModelAdmin):
     list_display = ("id", "slug", "title", "region", "season", "duration_category", "price", "activity_kind", "difficulty")
     list_display_links = ("id", "slug", "title")
     search_fields = ("title", "slug", "region__name")
-    list_filter = ("region", "activity_kind", "difficulty", "country")
+    list_filter = ("region", "activity_kind", "difficulty", "country", "tags")
+    filter_horizontal = ("tags",)
     ordering = ("id",)
 
     fieldsets = (

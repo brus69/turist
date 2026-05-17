@@ -12,18 +12,42 @@
   <header class="site-header">
     <div class="container site-header__inner">
       <a class="site-logo" href="{% url 'home' %}">ТурЭкоКлуб</a>
-      <nav class="site-nav" aria-label="Основное меню">
-        {% for item in HEADER_NAV %}
-          <a href="{{ item.href }}"
-            {% if item.href == '/tours/' and request.path == '/tours/' %}class="is-active"{% endif %}
-          >{{ item.label }}</a>
-        {% endfor %}
-      </nav>
+      <div id="site-nav-panel" class="site-nav-panel">
+        <nav class="site-nav" aria-label="Основное меню">
+          {% for item in HEADER_NAV %}
+            <a href="{{ item.href }}"
+              {% if item.href == '/tours/' and request.path == '/tours/' %}class="is-active"{% endif %}
+            >{{ item.label }}</a>
+          {% endfor %}
+        </nav>
+      </div>
       <div class="site-header__right">
-        <span class="muted" style="font-size:0.9rem;">Поиск</span>
+        <form class="site-header__search" method="get" action="{% url 'site-search' %}" role="search">
+          <label class="visually-hidden" for="header-search-q">Поиск</label>
+          <input
+            id="header-search-q"
+            class="site-header__search-input"
+            type="search"
+            name="q"
+            value="{{ request.GET.q|default:'' }}"
+            placeholder="Поиск…"
+            autocomplete="off"
+          >
+          <button type="submit" class="btn btn--primary site-header__search-btn">Поиск</button>
+        </form>
         <span class="site-header__phone">8 (800) 200-2456</span>
       </div>
+      <button
+        type="button"
+        class="site-header__menu-toggle"
+        aria-expanded="false"
+        aria-controls="site-nav-panel"
+        aria-label="Открыть меню"
+      >
+        <span class="site-header__menu-icon" aria-hidden="true"></span>
+      </button>
     </div>
+    <div class="site-nav-backdrop" id="site-nav-backdrop" hidden></div>
   </header>
 
   <main>
@@ -43,6 +67,7 @@
       </div>
       <div>
         <p class="footer-title">Клиентам</p>
+        <p><a href="{% url 'instructor-list' %}">Инструкторы</a></p>
         <p><a href="{% url 'home' %}#reviews">Отзывы</a></p>
         <p><a href="{% url 'home' %}#info">О сервисе</a></p>
       </div>
@@ -56,6 +81,7 @@
       © {% now "Y" %} Туристический агрегатор
     </div>
   </footer>
+  <script src="{% static 'js/site_header.js' %}" defer></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

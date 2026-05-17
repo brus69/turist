@@ -13,6 +13,7 @@ from tours.models import (
     TourInstructor,
     TourPackingItem,
     TourProgramDay,
+    Tag,
 )
 from tours.seed_data import SEED_TOURS, region_order_for_seed
 
@@ -29,6 +30,7 @@ _SEED_SKIP_KEYS = frozenset(
         "packing_list",
         "faq",
         "images",
+        "tags",
     }
 )
 _SEED_ALLOWED_KEYS = frozenset(f.name for f in Tour._meta.fields if f.name != "id")
@@ -55,7 +57,6 @@ def _sync_tour_lists_from_row(tour: Tour, row: dict) -> None:
             day_number=max(1, min(dn, 32767)),
             title=title or f"День {dn}",
             body=body,
-            order=idx,
         )
 
     def _sync_lines(model, key: str) -> None:
@@ -112,6 +113,19 @@ def _sync_tour_season_and_duration_from_row(tour: Tour, row: dict) -> None:
     tour.save(update_fields=["season", "duration_category"])
 
 
+def _sync_tags_from_row(tour: Tour, row: dict) -> None:
+    raw = row.get("tags")
+    if not isinstance(raw, list):
+        raw = []
+    tag_objs: list[Tag] = []
+    for name in raw:
+        if not isinstance(name, str) or not name.strip():
+            continue
+        tag, _ = Tag.objects.get_or_create(name=name.strip()[:120])
+        tag_objs.append(tag)
+    tour.tags.set(tag_objs)
+
+
 def _sync_gallery_from_row(tour: Tour, row: dict) -> None:
     raw = row.get("images")
     if not isinstance(raw, list):
@@ -147,6 +161,7 @@ class Command(BaseCommand):
             tour, _ = Tour.objects.update_or_create(slug=slug, defaults=defaults)
             _sync_tour_season_and_duration_from_row(tour, row)
             _sync_tour_lists_from_row(tour, row)
+            _sync_tags_from_row(tour, row)
             _sync_gallery_from_row(tour, row)
             TourInstructor.objects.filter(tour=tour).delete()
             for idx, item in enumerate(instructor_rows):
@@ -158,6 +173,16 @@ class Command(BaseCommand):
                 kid = kid[:64]
                 name = str(item.get("name") or kid)[:200]
                 av = str(item.get("avatarUrl") or "")[:512]
-                inst, _ = Instructor.objects.get_or_create(key=kid, defaults={"name": name, "avatar_url": av})
+                page_slug = str(item.get("slug") or "").strip()[:120] or kid
+                bio = str(item.get("bio") or item.get("description") or "").strip()
+                inst, _ = Instructor.objects.update_or_create(
+                    key=kid,
+                    defaults={
+                        "name": name,
+                        "avatar_url": av,
+                        "slug": page_slug,
+                        "description": bio,
+                    },
+                )
                 TourInstructor.objects.create(tour=tour, instructor=inst, order=idx)
         self.stdout.write(self.style.SUCCESS(f"OK: {len(SEED_TOURS)} туров"))

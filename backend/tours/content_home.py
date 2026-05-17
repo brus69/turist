@@ -123,6 +123,7 @@ HERO_BG = picsum_image("turist-hero-search-main", 1920, 900)
 
 HEADER_NAV = [
     {"label": "Выбрать тур", "href": "/tours/"},
+    {"label": "Инструкторы", "href": "/instructors/"},
     {"label": "Направления", "href": "/tours/?view=directions"},
     {"label": "Типы туров", "href": "/tours/?view=types"},
     {"label": "Отзывы", "href": "/#reviews"},

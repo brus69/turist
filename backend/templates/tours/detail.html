@@ -14,11 +14,18 @@
   <div class="detail-grid">
     <div>
       {% with imgs=tour.gallery_images.all %}
-      <div class="detail-gallery-top {% if imgs|length > 1 %}has-thumbs{% endif %}">
+      {% if gallery_image_urls %}
+      {{ gallery_image_urls|json_script:"tour-gallery-urls" }}
+      {% endif %}
+      <div class="detail-gallery-top {% if imgs|length > 1 %}has-thumbs{% endif %}" data-tour-gallery>
         <div class="gallery-main">
           {% for gi in imgs %}
             {% if forloop.first %}
-              {% if gi.url %}<img src="{{ gi.url }}" alt="" width="900" height="360" loading="eager">{% endif %}
+              {% if gi.url %}
+              <button type="button" class="gallery-zoom-hit gallery-zoom-hit--main" data-gallery-index="0" aria-label="Открыть фото крупно">
+                <img src="{{ gi.url }}" alt="{{ tour.title|truncatechars:80 }}" width="900" height="360" loading="eager">
+              </button>
+              {% endif %}
             {% endif %}
           {% endfor %}
         </div>
@@ -26,12 +33,12 @@
           <div class="gallery-thumbs">
             {% for gi in imgs %}
               {% if forloop.counter0 > 0 and forloop.counter0 < 5 %}
-                <div class="cell">
+                <button type="button" class="gallery-thumb-wrap" data-gallery-index="{{ forloop.counter0 }}" aria-label="Открыть фото {{ forloop.counter }} крупно">
                   <img src="{{ gi.url }}" alt="" loading="lazy">
                   {% if forloop.counter0 == 4 and tour.gallery_extra_photos_count %}
-                    <div class="more">+{{ tour.gallery_extra_photos_count }} фотографии</div>
+                    <span class="more">+{{ tour.gallery_extra_photos_count }} фотографии</span>
                   {% endif %}
-                </div>
+                </button>
               {% endif %}
             {% endfor %}
           </div>
@@ -51,7 +58,7 @@
       <h1 style="font-size:1.75rem;margin:16px 0;">{{ tour.title }}</h1>
 
       <div class="badges-row mb-md">
-        {% for t in tour.tags %}<span class="badge">{{ t }}</span>{% endfor %}
+        {% for tag in tour.tags.all %}<a class="badge" href="{% url 'tour-catalog' %}?tag={{ tag.name|urlencode }}">{{ tag.name }}</a>{% endfor %}
       </div>
 
       <div class="stats-row mb-md">
@@ -128,7 +135,9 @@
           <p style="font-weight:800;color:var(--color-orange);font-size:0.85rem;">{{ tour.status_label }}</p>
         {% endif %}
         <p class="price-big">{{ tour.price }} ₽</p>
-        {% if tour.spots_left %}<p class="muted">Осталось мест: {{ tour.spots_left }}</p>{% endif %}
+        {% if tour.spots_left and not tour.date_slots %}
+        <p class="muted">Осталось мест: {{ tour.spots_left }}</p>
+        {% endif %}
         <p class="muted mt-sm">{{ tour.date_summary }}</p>
 
         {% if tour.season %}
@@ -139,26 +148,32 @@
         {% endif %}
 
         <form class="mt-md" id="tour-booking-form" method="get" action="#">
-          <label class="muted" style="font-size:0.85rem;display:block;margin-bottom:8px;">Дата выезда</label>
           {% if tour.date_slots %}
             {{ tour.date_slots|json_script:"tour-slots-data" }}
-            <div id="tour-calendar-root" class="tour-calendar" aria-live="polite"></div>
-            <input type="hidden" name="slot" id="tour-slot-id" value="">
-            <p class="tour-cal-hint muted" id="tour-cal-selection" style="font-size:0.85rem;margin-top:10px;"></p>
+            <label class="tour-slot-field-label muted" for="tour-slot-select">Выбрать дату</label>
+            <div class="tour-slot-select-wrap">
+              <select id="tour-slot-select" class="tour-slot-select" name="slot" aria-label="Дата выезда"{% if tour.spots_left %} aria-describedby="tour-slot-fire"{% endif %}></select>
+            </div>
+            {% if tour.spots_left %}
+            <p class="tour-slot-fire" id="tour-slot-fire">🔥 Осталось {{ tour.spots_left }} мест</p>
+            {% endif %}
           {% else %}
+            <p class="tour-slot-field-label muted">Выбрать дату</p>
             <p class="muted" style="font-size:0.85rem;">Даты уточняются.</p>
           {% endif %}
           <button type="button" class="btn btn--primary mt-md" style="width:100%;" disabled title="Демо">Отправить заявку</button>
         </form>
 
         {% for link in tour.instructor_links.all %}
-          <div class="mt-md" style="display:flex;gap:12px;align-items:center;">
+          <div class="mt-md instructor-side-block">
             {% if link.instructor.avatar_url %}
-              <img src="{{ link.instructor.avatar_url }}" alt="" width="56" height="56" style="border-radius:50%;object-fit:cover;">
+              <a href="{% url 'instructor-detail' link.instructor.slug %}" class="instructor-side-block__avatar-link">
+                <img src="{{ link.instructor.avatar_url }}" alt="" width="56" height="56" style="border-radius:50%;object-fit:cover;">
+              </a>
             {% endif %}
             <div>
               <strong>Инструктор</strong>
-              <div>{{ link.instructor.name }}</div>
+              <div><a href="{% url 'instructor-detail' link.instructor.slug %}">{{ link.instructor.name }}</a></div>
             </div>
           </div>
         {% empty %}
@@ -172,8 +187,10 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{% if gallery_image_urls %}
+<script defer src="{% static 'js/tour_gallery_lightbox.js' %}"></script>
+{% endif %}
 {% if tour.date_slots %}
-<script defer src="{% static 'js/date_slot_calendar_shared.js' %}"></script>
 <script defer src="{% static 'js/tour_date_calendar.js' %}"></script>
 {% endif %}
 {% endblock %}

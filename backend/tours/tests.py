@@ -1,17 +1,23 @@
 from datetime import date
 
-from django.test import TestCase
+from django.template import Context, Template
+from django.test import RequestFactory, TestCase
 
 from .breadcrumbs import tour_breadcrumb_links
+from .catalog_params import catalog_params_from_request, merge_query_pairs
 from .filters import filter_tours
+from .search import search_instructors, search_tours
 from .models import (
     DurationCategory,
+    Instructor,
     Region,
     Season,
+    Tag,
     Tour,
     TourDateSlot,
     date_summary_from_slots,
     first_start_date_from_slots,
+    normalize_date_slots_for_save,
 )
 
 
@@ -88,6 +94,64 @@ class UrlSmokeTests(TestCase):
         r = self.client.get("/tours/smoke-tour/")
         self.assertEqual(r.status_code, 200)
 
+    def test_site_search_page(self):
+        r = self.client.get("/search/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_site_search_finds_tour(self):
+        r = self.client.get("/search/", {"q": "Тестовый"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "smoke-tour")
+        self.assertContains(r, "Туры")
+
+
+class InstructorPagesTests(TestCase):
+    def setUp(self):
+        Instructor.objects.create(
+            key="test-i",
+            slug="test-instructor",
+            name="Тест Инструктор",
+            description="Описание для персональной страницы.",
+        )
+
+    def test_instructor_list(self):
+        r = self.client.get("/instructors/")
+        self.assertEqual(r.status_code, 200)
+
+    def test_instructor_detail(self):
+        r = self.client.get("/instructors/test-instructor/")
+        self.assertEqual(r.status_code, 200)
+
+
+class NormalizeDateSlotsTests(TestCase):
+    def test_normalize_strips_id_and_sets_label(self):
+        raw = [
+            {"id": "custom", "label": "ручная", "start": "2026-05-08", "end": "2026-05-10"},
+            {"start": "2026-07-01", "end": "2026-07-05"},
+        ]
+        out = normalize_date_slots_for_save(raw)
+        self.assertNotIn("id", out[0])
+        self.assertEqual(set(out[0].keys()), {"start", "end", "label"})
+        self.assertIn("мая", out[0]["label"])
+        self.assertNotEqual(out[0]["label"], "ручная")
+
+    def test_save_tour_normalizes_date_slots(self):
+        reg, _ = Region.objects.get_or_create(name="Регион X", defaults={"order": 1})
+        t = Tour.objects.create(
+            slug="norm-slots",
+            title="N",
+            region=reg,
+            activity_type="Пешие",
+            activity_kind="hike",
+            difficulty="easy",
+            price=100,
+            description="d",
+            date_slots=[{"id": "z", "label": "x", "start": "2026-06-01", "end": "2026-06-02"}],
+        )
+        t.refresh_from_db()
+        self.assertNotIn("id", t.date_slots[0])
+        self.assertIn("июня", t.date_slots[0]["label"])
+
 
 class DateSummaryAndSlotsTests(TestCase):
     def test_date_summary_from_slots(self):
@@ -150,3 +214,203 @@ class FilterToursOrmTests(TestCase):
     def test_filter_region_by_name(self):
         out = filter_tours(Tour.objects.all(), {"region": "Тестовый регион"})
         self.assertEqual({t.slug for t in out}, {"f-a", "f-b"})
+
+    def test_filter_difficulty(self):
+        ta = Tour.objects.get(slug="f-a")
+        tb = Tour.objects.get(slug="f-b")
+        ta.difficulty = "easy"
+        tb.difficulty = "hard"
+        ta.save(update_fields=["difficulty"])
+        tb.save(update_fields=["difficulty"])
+        out = filter_tours(Tour.objects.all(), {"difficulty": "easy"})
+        self.assertEqual({t.slug for t in out}, {"f-a"})
+
+    def test_filter_holiday(self):
+        tb = Tour.objects.get(slug="f-b")
+        tb.holiday = ["may"]
+        tb.save(update_fields=["holiday"])
+        out = filter_tours(Tour.objects.all(), {"holiday": "may"})
+        self.assertEqual({t.slug for t in out}, {"f-b"})
+
+    def test_filter_activity(self):
+        ta = Tour.objects.get(slug="f-a")
+        ta.activity_kind = "kayak"
+        ta.save(update_fields=["activity_kind"])
+        out = filter_tours(Tour.objects.all(), {"activity": "kayak"})
+        self.assertEqual({t.slug for t in out}, {"f-a"})
+
+    def test_filter_multi_season_or(self):
+        winter, _ = Season.objects.get_or_create(code="winter", defaults={"name": "Зима", "order": 2})
+        ta = Tour.objects.get(slug="f-a")
+        ta.season = winter
+        ta.save(update_fields=["season"])
+        out = filter_tours(Tour.objects.all(), {"season": "summer,winter"})
+        self.assertEqual({t.slug for t in out}, {"f-a", "f-b"})
+
+    def test_filter_combo(self):
+        ta = Tour.objects.get(slug="f-a")
+        tb = Tour.objects.get(slug="f-b")
+        ta.difficulty = "easy"
+        tb.difficulty = "hard"
+        ta.save(update_fields=["difficulty"])
+        tb.save(update_fields=["difficulty"])
+        out = filter_tours(
+            Tour.objects.all(),
+            {"region": "Тестовый регион", "priceMin": "4000", "difficulty": "easy"},
+        )
+        self.assertEqual({t.slug for t in out}, {"f-a"})
+
+    def test_filter_q_by_description(self):
+        ta = Tour.objects.get(slug="f-a")
+        ta.description = "УникальноеСловоВОписании"
+        ta.save(update_fields=["description"])
+        out = filter_tours(Tour.objects.all(), {"q": "УникальноеСлово"})
+        self.assertEqual({t.slug for t in out}, {"f-a"})
+
+    def test_filter_ignores_invalid_codes(self):
+        out = filter_tours(
+            Tour.objects.all(),
+            {"activity": "invalid", "holiday": "bogus", "difficulty": "impossible"},
+        )
+        self.assertEqual({t.slug for t in out}, {"f-a", "f-b"})
+
+
+class TourTagTests(TestCase):
+    def setUp(self):
+        reg, _ = Region.objects.get_or_create(name="Регион тегов", defaults={"order": 900})
+        self.tag_a, _ = Tag.objects.get_or_create(name="Пешие походы")
+        self.tag_b, _ = Tag.objects.get_or_create(name="На выходные")
+        self.tour = Tour.objects.create(**_minimal_tour_kwargs("tagged-tour", region=reg))
+        self.tour.tags.set([self.tag_a, self.tag_b])
+        Tour.objects.create(**_minimal_tour_kwargs("other-tour", region=reg, title="Другой тур"))
+
+    def test_tour_tags_m2m(self):
+        names = list(self.tour.tags.values_list("name", flat=True))
+        self.assertEqual(sorted(names), ["На выходные", "Пешие походы"])
+
+    def test_filter_by_tag(self):
+        out = filter_tours(Tour.objects.all(), {"tag": "Пешие походы"})
+        self.assertEqual({t.slug for t in out}, {"tagged-tour"})
+
+    def test_filter_tag_distinct(self):
+        out = filter_tours(Tour.objects.all(), {"tag": "Пешие походы"})
+        self.assertEqual(len(out), 1)
+
+    def test_catalog_filter_by_tag_url(self):
+        r = self.client.get("/tours/", {"tag": "На выходные"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "tagged-tour")
+        self.assertNotContains(r, "other-tour")
+        self.assertContains(r, "?tag=")
+
+
+class SiteSearchTests(TestCase):
+    def setUp(self):
+        Tour.objects.create(**_minimal_tour_kwargs("search-tour", title="Поход в Карелию"))
+        Instructor.objects.create(
+            key="search-i",
+            slug="karelia-guide",
+            name="Гид Карелии",
+            description="Проводник по северным маршрутам.",
+        )
+
+    def test_search_tours_by_title(self):
+        out = search_tours(Tour.objects.all(), "Карелию")
+        self.assertEqual([t.slug for t in out], ["search-tour"])
+
+    def test_search_instructors_by_name(self):
+        out = search_instructors(Instructor.objects.all(), "Карелии")
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0].slug, "karelia-guide")
+
+    def test_search_page_shows_instructor(self):
+        r = self.client.get("/search/", {"q": "Карелии"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "karelia-guide")
+        self.assertContains(r, "Инструкторы")
+
+
+class CatalogFilterHttpTests(TestCase):
+    def setUp(self):
+        summer, _ = Season.objects.get_or_create(code="summer", defaults={"name": "Лето", "order": 1})
+        self.assertTrue(summer)
+        weekend, _ = DurationCategory.objects.get_or_create(
+            code="weekend", defaults={"name": "На выходные", "order": 2}
+        )
+        self.assertTrue(weekend)
+        tb = Tour.objects.create(
+            **_minimal_tour_kwargs(
+                "http-b",
+                title="Каталог HTTP",
+                date_slots=[
+                    {"start": "2026-07-01", "end": "2026-07-05"},
+                ],
+            )
+        )
+        tb.season = summer
+        tb.duration_category = weekend
+        tb.holiday = ["may"]
+        tb.activity_kind = "hike"
+        tb.save(update_fields=["season", "duration_category", "holiday", "activity_kind"])
+        Tour.objects.create(**_minimal_tour_kwargs("http-other", title="Другой"))
+
+    def test_catalog_duration_and_season(self):
+        r = self.client.get("/tours/", {"duration": "weekend", "season": "summer"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "http-b")
+        self.assertNotContains(r, "http-other")
+
+    def test_catalog_activity(self):
+        r = self.client.get("/tours/", {"activity": "hike"})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "http-b")
+
+    def test_catalog_sort_preserves_multi_filters(self):
+        r = self.client.get(
+            "/tours/",
+            [
+                ("duration", "weekend"),
+                ("season", "summer"),
+                ("sort", "price"),
+                ("dir", "asc"),
+            ],
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'name="season" value="summer" checked')
+        self.assertContains(r, 'name="duration" value="weekend" checked')
+
+
+class QueryUpdateTagTests(TestCase):
+    def setUp(self):
+        Season.objects.get_or_create(code="summer", defaults={"name": "Лето", "order": 1})
+        Season.objects.get_or_create(code="winter", defaults={"name": "Зима", "order": 2})
+        DurationCategory.objects.get_or_create(code="weekend", defaults={"name": "На выходные", "order": 2})
+
+    def test_query_update_preserves_multi_season(self):
+        request = RequestFactory().get(
+            "/tours/",
+            [("season", "summer"), ("season", "winter"), ("duration", "weekend")],
+        )
+        duration_codes = frozenset(DurationCategory.objects.values_list("code", flat=True))
+        season_codes = frozenset(Season.objects.values_list("code", flat=True))
+        params = catalog_params_from_request(
+            request,
+            duration_codes=duration_codes,
+            season_codes=season_codes,
+        )
+        qs = merge_query_pairs(params.query_pairs(), sort="price", dir="asc")
+        self.assertIn("season=summer", qs)
+        self.assertIn("season=winter", qs)
+        self.assertIn("duration=weekend", qs)
+        self.assertIn("sort=price", qs)
+
+    def test_query_update_template_tag(self):
+        request = RequestFactory().get(
+            "/tours/",
+            [("season", "summer"), ("season", "winter")],
+        )
+        tpl = Template("{% load catalog_tags %}{% query_update sort='price' dir='asc' %}")
+        out = tpl.render(Context({"request": request}))
+        self.assertIn("season=summer", out)
+        self.assertIn("season=winter", out)
+        self.assertIn("sort=price", out)

@@ -45,6 +45,20 @@ def first_start_date_from_slots(slots: list | None) -> date | None:
         return None
 
 
+def slot_label_from_start_end(start: date, end: date) -> str:
+    """Краткая подпись интервала (как на сайте для одного слота)."""
+    days = (end - start).days + 1
+    mg = _MONTH_GEN
+    dw = _days_word_ru(days)
+    if start == end:
+        return f"{start.day} {mg[start.month - 1]} {start.year} - {days} {dw}"
+    if start.year == end.year and start.month == end.month:
+        return f"с {start.day} по {end.day} {mg[start.month - 1]} {start.year} - {days} {dw}"
+    if start.year == end.year:
+        return f"с {start.day} {mg[start.month - 1]} по {end.day} {mg[end.month - 1]} {start.year} - {days} {dw}"
+    return f"с {start.day} {mg[start.month - 1]} {start.year} по {end.day} {mg[end.month - 1]} {end.year} - {days} {dw}"
+
+
 def date_summary_from_slots(slots: list | None) -> str:
     """Краткая строка дат для карточки по первому слоту с start/end (ISO)."""
     if not slots:
@@ -61,16 +75,31 @@ def date_summary_from_slots(slots: list | None) -> str:
         end = date.fromisoformat(str(s0["end"])[:10])
     except ValueError:
         return str(s0.get("label") or "Даты уточняются")
-    days = (end - start).days + 1
-    mg = _MONTH_GEN
-    dw = _days_word_ru(days)
-    if start == end:
-        return f"{start.day} {mg[start.month - 1]} {start.year} - {days} {dw}"
-    if start.year == end.year and start.month == end.month:
-        return f"с {start.day} по {end.day} {mg[start.month - 1]} {start.year} - {days} {dw}"
-    if start.year == end.year:
-        return f"с {start.day} {mg[start.month - 1]} по {end.day} {mg[end.month - 1]} {start.year} - {days} {dw}"
-    return f"с {start.day} {mg[start.month - 1]} {start.year} по {end.day} {mg[end.month - 1]} {end.year} - {days} {dw}"
+    return slot_label_from_start_end(start, end)
+
+
+def normalize_date_slots_for_save(slots: list | None) -> list:
+    """В JSON только start, end и вычисленная label (без id)."""
+    if not slots:
+        return []
+    out: list[dict] = []
+    for raw in slots:
+        if not isinstance(raw, dict):
+            continue
+        start_s = raw.get("start")
+        end_s = raw.get("end")
+        item: dict = {"start": start_s, "end": end_s}
+        if start_s and end_s:
+            try:
+                sd = date.fromisoformat(str(start_s)[:10])
+                ed = date.fromisoformat(str(end_s)[:10])
+                item["label"] = slot_label_from_start_end(sd, ed)
+            except ValueError:
+                item["label"] = ""
+        else:
+            item["label"] = ""
+        out.append(item)
+    return out
 
 
 def picsum_url(seed: str, width: int = 800, height: int = 520) -> str:
@@ -139,6 +168,20 @@ class DurationCategory(models.Model):
         return self.name
 
 
+class Tag(models.Model):
+    """Тег для оформления карточки тура (регион, тип активности и т.п.)."""
+
+    name = models.CharField("Название", max_length=120, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Тег"
+        verbose_name_plural = "Теги"
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Tour(models.Model):
     """Тур: основные поля в БД, вложенные структуры — JSON."""
 
@@ -174,11 +217,16 @@ class Tour(models.Model):
     status_label = models.CharField("Метка статуса", max_length=80, blank=True)
     spots_left = models.PositiveIntegerField("Осталось мест", null=True, blank=True)
     description = models.TextField("Описание")
-    tags = models.JSONField("Теги", default=list, help_text="Список строк")
+    tags = models.ManyToManyField(
+        Tag,
+        related_name="tours",
+        blank=True,
+        verbose_name="Теги",
+    )
     date_slots = models.JSONField(
         "Слоты дат",
         default=list,
-        help_text="id, label, start, end (ISO YYYY-MM-DD). Краткая строка дат на сайте берётся из первого слота с датами.",
+        help_text="Слоты: start и end (ISO YYYY-MM-DD). Подпись для сайта — при сохранении. Ключ слота в БД (d1, …) не хранится в JSON.",
     )
     season = models.ForeignKey(
         Season,
@@ -217,6 +265,10 @@ class Tour(models.Model):
         return self.title
 
     def save(self, *args, **kwargs) -> None:
+        uf = kwargs.get("update_fields")
+        if uf is None or "date_slots" in uf:
+            if isinstance(self.date_slots, list):
+                self.date_slots = normalize_date_slots_for_save(self.date_slots)
         self.first_start = first_start_date_from_slots(self.date_slots)
         super().save(*args, **kwargs)
         TourDateSlot.objects.filter(tour_id=self.pk).delete()
@@ -237,7 +289,7 @@ class Tour(models.Model):
                 TourDateSlot(
                     tour=self,
                     position=pos,
-                    slot_key=str(s.get("id") or "")[:64],
+                    slot_key=f"d{pos + 1}"[:64],
                     label=str(s.get("label") or "")[:200],
                     start=sd,
                     end=ed,
@@ -287,11 +339,19 @@ class TourDateSlot(models.Model):
 
 
 class Instructor(models.Model):
-    """Инструктор (может быть привязан к нескольким турам через TourInstructor)."""
+    """Инструктор (персональная страница + туры через TourInstructor)."""
 
-    key = models.SlugField("Ключ", max_length=64, unique=True, help_text="Стабильный id, например из сидов")
+    key = models.SlugField("Ключ", max_length=64, unique=True, help_text="Стабильный id для сидов и API")
+    slug = models.SlugField(
+        "Слаг (URL)",
+        max_length=120,
+        unique=True,
+        db_index=True,
+        help_text="Адрес страницы: /instructors/ваш-слаг/",
+    )
     name = models.CharField("Имя", max_length=200)
     avatar_url = models.URLField("Фото URL", max_length=512, blank=True)
+    description = models.TextField("Описание", blank=True, help_text="Текст на персональной странице")
 
     class Meta:
         ordering = ["name", "key"]
@@ -346,10 +406,9 @@ class TourProgramDay(models.Model):
     day_number = models.PositiveSmallIntegerField("Номер дня", default=1)
     title = models.CharField("Заголовок", max_length=300)
     body = models.TextField("Описание", blank=True)
-    order = models.PositiveSmallIntegerField("Порядок", default=0)
 
     class Meta:
-        ordering = ["order", "id"]
+        ordering = ["day_number", "id"]
         verbose_name = "День программы"
         verbose_name_plural = "Программа по дням"
 

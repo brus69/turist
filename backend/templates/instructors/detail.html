@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ instructor.name }}{% endblock %}
+{% block content %}
+<div class="container section">
+  <nav class="breadcrumbs">
+    <a href="{% url 'home' %}">Главная</a>
+    · <a href="{% url 'instructor-list' %}">Инструкторы</a>
+    · <span>{{ instructor.name|truncatechars:40 }}</span>
+  </nav>
+
+  <div class="instructor-page">
+    <header class="instructor-page__header">
+      {% if instructor.avatar_url %}
+        <img class="instructor-page__avatar" src="{{ instructor.avatar_url }}" alt="" width="160" height="160" loading="eager">
+      {% else %}
+        <div class="instructor-page__avatar instructor-page__avatar--placeholder" aria-hidden="true"></div>
+      {% endif %}
+      <div>
+        <h1 class="instructor-page__title">{{ instructor.name }}</h1>
+        <p class="muted" style="margin:0;">Инструктор ТурЭкоКлуба</p>
+      </div>
+    </header>
+
+    <div class="instructor-page__body">
+      {% if instructor.description %}
+        <div class="instructor-page__text">
+          {{ instructor.description|linebreaks }}
+        </div>
+      {% else %}
+        <p class="muted">Подробное описание скоро появится.</p>
+      {% endif %}
+    </div>
+
+    {% if instructor_tours %}
+    <section class="mt-md" style="margin-top:32px;">
+      <h2 class="mb-md">Туры с этим инструктором</h2>
+      <div class="tour-grid">
+        {% for tour in instructor_tours %}
+          {% include "partials/tour_card.html" with tour=tour %}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

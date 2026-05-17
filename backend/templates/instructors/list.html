@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Инструкторы{% endblock %}
+{% block content %}
+<div class="container section">
+  <nav class="breadcrumbs">
+    <a href="{% url 'home' %}">Главная</a>
+    · <span>Инструкторы</span>
+  </nav>
+  <h1 class="mb-md">Инструкторы</h1>
+  <p class="muted mb-md">Команда проводников и гидов ТурЭкоКлуба.</p>
+
+  <div class="instructor-grid">
+    {% for i in instructors %}
+      <a class="instructor-card" href="{% url 'instructor-detail' i.slug %}">
+        {% if i.avatar_url %}
+          <img class="instructor-card__photo" src="{{ i.avatar_url }}" alt="" width="120" height="120" loading="lazy">
+        {% else %}
+          <div class="instructor-card__photo instructor-card__photo--placeholder" aria-hidden="true"></div>
+        {% endif %}
+        <h2 class="instructor-card__name">{{ i.name }}</h2>
+        {% if i.description %}
+          <p class="instructor-card__excerpt muted">{{ i.description|truncatewords:32 }}</p>
+        {% else %}
+          <p class="instructor-card__excerpt muted">Персональная страница</p>
+        {% endif %}
+        {% if i.tour_count %}
+          <p class="instructor-card__meta muted" style="font-size:0.8rem;">Туров: {{ i.tour_count }}</p>
+        {% endif %}
+      </a>
+    {% empty %}
+      <p class="muted">Скоро здесь появятся инструкторы.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

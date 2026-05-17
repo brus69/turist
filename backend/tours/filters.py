@@ -8,15 +8,11 @@ from operator import or_
 
 from django.db.models import Exists, OuterRef, Q, QuerySet
 
+from .catalog_params import ACTIVITY_KINDS, CatalogParams, catalog_params_from_dict
 from .models import Tour, TourDateSlot
+from .tour_text_search import search_terms, tour_text_search_q
 
 DIFFICULTY_ORDER = {"easy": 1, "medium": 2, "hard": 3, "very_hard": 4}
-
-
-def _parse_csv(value: str | None) -> list[str]:
-    if not value:
-        return []
-    return [x for x in value.split(",") if x]
 
 
 def _first_start_sort_key(t: Tour) -> str:
@@ -25,28 +21,31 @@ def _first_start_sort_key(t: Tour) -> str:
     return ""
 
 
-def filter_tours(qs: QuerySet[Tour], params: dict[str, str]) -> list[Tour]:
-    q = (params.get("q") or "").strip()
-    if q:
-        qs = qs.filter(title__icontains=q)
+def apply_catalog_filters(qs: QuerySet[Tour], params: CatalogParams | dict[str, str]) -> QuerySet[Tour]:
+    if isinstance(params, dict):
+        params = catalog_params_from_dict(params)
 
-    region = params.get("region")
-    if region:
-        qs = qs.filter(Q(region__name=region) | Q(country=region))
+    if params.q:
+        terms = search_terms(params.q)
+        text_q = tour_text_search_q(terms)
+        if text_q is not None:
+            qs = qs.filter(text_q)
 
-    activity = params.get("activity")
-    kinds = {"hike", "kayak", "horse", "mountain"}
-    if activity and activity in kinds:
-        qs = qs.filter(activity_kind=activity)
+    if params.region:
+        qs = qs.filter(Q(region__name=params.region) | Q(country=params.region))
+
+    if params.tag:
+        qs = qs.filter(tags__name=params.tag)
+
+    if params.activity:
+        qs = qs.filter(activity_kind=params.activity)
 
     try:
-        pmin_raw = params.get("price_min") or params.get("priceMin")
-        pmin = int(pmin_raw) if pmin_raw else None
+        pmin = int(params.price_min) if params.price_min else None
     except (ValueError, TypeError):
         pmin = None
     try:
-        pmax_raw = params.get("price_max") or params.get("priceMax")
-        pmax = int(pmax_raw) if pmax_raw else None
+        pmax = int(params.price_max) if params.price_max else None
     except (ValueError, TypeError):
         pmax = None
     if pmin is not None:
@@ -54,23 +53,22 @@ def filter_tours(qs: QuerySet[Tour], params: dict[str, str]) -> list[Tour]:
     if pmax is not None:
         qs = qs.filter(price__lte=pmax)
 
-    duration_sel = _parse_csv(params.get("duration"))
-    if duration_sel:
-        qs = qs.filter(duration_category__code__in=duration_sel)
+    if params.duration:
+        qs = qs.filter(duration_category__code__in=params.duration)
 
-    season_sel = _parse_csv(params.get("season"))
-    if season_sel:
-        qs = qs.filter(season__code__in=season_sel)
+    if params.season:
+        qs = qs.filter(season__code__in=params.season)
 
-    holiday_sel = _parse_csv(params.get("holiday"))
-    if holiday_sel:
-        qs = qs.filter(reduce(or_, [Q(holiday__contains=[h]) for h in holiday_sel]))
+    if params.holiday:
+        # SQLite не поддерживает JSON contains; ищем код праздника в сериализованном массиве.
+        qs = qs.filter(reduce(or_, [Q(holiday__icontains=f'"{h}"') for h in params.holiday]))
 
-    when_from = params.get("from") or params.get("when_from")
-    when_to = params.get("to") or params.get("when_to")
-    if when_from or when_to:
-        f_str = when_from or "1970-01-01"
-        to_str = when_to or "2999-12-31"
+    if params.difficulty:
+        qs = qs.filter(difficulty__in=params.difficulty)
+
+    if params.date_from or params.date_to:
+        f_str = params.date_from or "1970-01-01"
+        to_str = params.date_to or "2999-12-31"
         try:
             f_date = date.fromisoformat(f_str[:10])
         except ValueError:
@@ -88,19 +86,16 @@ def filter_tours(qs: QuerySet[Tour], params: dict[str, str]) -> list[Tour]:
         )
         qs = qs.filter(Exists(overlap))
 
-    sort = params.get("sort") or "date"
-    desc = (params.get("dir") or "asc") == "desc"
-    avail_first = params.get("avail") == "1"
+    return qs.distinct()
 
-    items = list(qs)
 
-    if activity and activity not in kinds:
-        low = activity.lower()
-        items = [
-            t
-            for t in items
-            if low in t.activity_type.lower() or any(low in tag.lower() for tag in (t.tags or []))
-        ]
+def sort_tours(items: list[Tour], params: CatalogParams | dict[str, str]) -> list[Tour]:
+    if isinstance(params, dict):
+        params = catalog_params_from_dict(params)
+
+    sort = params.sort or "date"
+    desc = params.dir == "desc"
+    avail_first = params.avail == "1"
 
     def cmp(a: Tour, b: Tour) -> int:
         if avail_first:
@@ -129,3 +124,8 @@ def filter_tours(qs: QuerySet[Tour], params: dict[str, str]) -> list[Tour]:
 
     items.sort(key=cmp_to_key(cmp))
     return items
+
+
+def filter_tours(qs: QuerySet[Tour], params: CatalogParams | dict[str, str]) -> list[Tour]:
+    qs = apply_catalog_filters(qs.prefetch_related("tags"), params)
+    return sort_tours(list(qs), params)

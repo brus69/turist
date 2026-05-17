@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Поиск{% if q %}: {{ q }}{% endif %}{% endblock %}
+{% block content %}
+<div class="container section">
+  <nav class="breadcrumbs">
+    <a href="{% url 'home' %}">Главная</a>
+    · <span>Поиск</span>
+  </nav>
+
+  <h1 class="mb-md">Поиск</h1>
+
+  <form class="search-page-form mb-md" method="get" action="{% url 'site-search' %}" role="search">
+    <label class="visually-hidden" for="search-page-q">Запрос</label>
+    <input
+      id="search-page-q"
+      class="search-page-form__input"
+      type="search"
+      name="q"
+      value="{{ q }}"
+      placeholder="Название тура, регион, инструктор…"
+      autocomplete="off"
+      autofocus
+    >
+    <button type="submit" class="btn btn--primary">Поиск</button>
+  </form>
+
+  {% if not q %}
+    <p class="muted">Введите запрос — найдём туры и инструкторов по названию, описанию и региону.</p>
+  {% elif total == 0 %}
+    <p class="muted">По запросу «{{ q }}» ничего не найдено. Попробуйте другие слова или <a href="{% url 'tour-catalog' %}">откройте каталог</a>.</p>
+  {% else %}
+    <p class="muted mb-md">Найдено: {{ total }}</p>
+
+    {% if tours %}
+      <section class="search-results-section mb-md">
+        <h2 class="search-results-section__title">Туры <span class="muted">({{ tours|length }})</span></h2>
+        <div class="tour-grid">
+          {% for tour in tours %}
+            {% include "partials/tour_card.html" with tour=tour %}
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if instructors %}
+      <section class="search-results-section">
+        <h2 class="search-results-section__title">Инструкторы <span class="muted">({{ instructors|length }})</span></h2>
+        <div class="instructor-grid instructor-grid--compact">
+          {% for i in instructors %}
+            <a class="instructor-card" href="{% url 'instructor-detail' i.slug %}">
+              {% if i.avatar_url %}
+                <img class="instructor-card__photo" src="{{ i.avatar_url }}" alt="" width="80" height="80" loading="lazy">
+              {% else %}
+                <div class="instructor-card__photo instructor-card__photo--placeholder" aria-hidden="true"></div>
+              {% endif %}
+              <h3 class="instructor-card__name">{{ i.name }}</h3>
+              {% if i.description %}
+                <p class="instructor-card__excerpt muted">{{ i.description|truncatewords:24 }}</p>
+              {% endif %}
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

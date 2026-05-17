@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load catalog_tags %}
+{% load catalog_tags static %}
 {% block title %}Туры{% endblock %}
 {% block content %}
 <div class="container section">
@@ -9,8 +9,13 @@
   </nav>
 
   <h1 class="mb-md">
-    {% if get_params.region %}Походы: {{ get_params.region }}{% else %}Походы выходного дня по Карелии и Ленобласти{% endif %}
+    {% if get_params.tag %}Походы: {{ get_params.tag }}{% elif get_params.region %}Походы: {{ get_params.region }}{% else %}Походы выходного дня по Карелии и Ленобласти{% endif %}
   </h1>
+  {% if get_params.tag %}
+    <p class="mb-md">
+      <a class="badge is-active" href="{% url 'tour-catalog' %}?{% query_update tag=None %}">× сбросить тег</a>
+    </p>
+  {% endif %}
 
   <div class="catalog-layout">
     <div class="catalog-main">
@@ -36,107 +41,174 @@
     </div>
 
     <aside class="catalog-filters-desktop">
-      <h2 class="muted" style="font-size:1rem;margin-top:0;">Фильтры</h2>
-      <form class="filters-panel" method="get" action="{% url 'tour-catalog' %}">
+      <form class="catalog-filters filters-panel" id="catalog-filters-form" method="get" action="{% url 'tour-catalog' %}">
         <input type="hidden" name="sort" value="{{ get_params.sort|default:'date' }}">
         <input type="hidden" name="dir" value="{{ get_params.dir|default:'asc' }}">
+        {% if get_params.tag %}<input type="hidden" name="tag" value="{{ get_params.tag }}">{% endif %}
 
-        <div class="filter-block">
-          <h4>Поиск</h4>
-          <input type="search" name="q" placeholder="По названию" value="{{ get_params.q|default:'' }}" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--color-border);">
-        </div>
-
-        <div class="filter-block">
-          <h4>Длительность</h4>
-          {% for d in duration_filters %}
-            <label style="display:block;margin:6px 0;">
-              <input type="checkbox" name="duration" value="{{ d.code }}"
-                {% if d.code in duration_selected %}checked{% endif %}>
-              {{ d.name }}
-            </label>
-          {% endfor %}
-        </div>
-
-        <div class="filter-block">
-          <h4>Дата</h4>
-          <div class="filter-row">
-            <div class="field">
-              <label for="f-from">С</label>
-              <input id="f-from" type="date" name="from" value="{{ get_params.from|default:'' }}">
-            </div>
-            <div class="field">
-              <label for="f-to">По</label>
-              <input id="f-to" type="date" name="to" value="{{ get_params.to|default:'' }}">
-            </div>
-          </div>
-          <label style="display:block;margin-top:10px;">
-            <input type="checkbox" name="avail" value="1" {% if get_params.avail == '1' %}checked{% endif %}>
-            Сначала где есть места
-          </label>
-        </div>
-
-        <div class="filter-block">
-          <h4>Сезон</h4>
-          {% for s in seasons %}
-            <label style="display:block;margin:6px 0;">
-              <input type="checkbox" name="season" value="{{ s.code }}"
-                {% if s.code in season_selected %}checked{% endif %}>
-              {{ s.name }}
-            </label>
-          {% endfor %}
-        </div>
-
-        <div class="filter-block">
-          <h4>Праздники</h4>
-          {% for h in holidays %}
-            <label style="display:block;margin:6px 0;">
-              <input type="checkbox" name="holiday" value="{{ h.value }}"
-                {% if h.value in holiday_selected %}checked{% endif %}>
-              {{ h.label }}
-            </label>
-          {% endfor %}
-        </div>
-
-        <div class="filter-block">
-          <h4>Цена, ₽</h4>
-          <div class="filter-row">
-            <div class="field">
-              <label for="pmin">от</label>
-              <input id="pmin" type="number" name="priceMin" min="0" value="{{ get_params.priceMin|default:'' }}" placeholder="2000">
-            </div>
-            <div class="field">
-              <label for="pmax">до</label>
-              <input id="pmax" type="number" name="priceMax" min="0" value="{{ get_params.priceMax|default:'' }}" placeholder="200000">
-            </div>
-          </div>
-        </div>
-
-        <div class="filter-block">
-          <h4>Направления</h4>
-          <label style="display:block;margin:6px 0;">
-            <input type="radio" name="region" value="" {% if not get_params.region %}checked{% endif %}> Все
-          </label>
-          {% for r in regions %}
-            <label style="display:block;margin:6px 0;">
-              <input type="radio" name="region" value="{{ r.name }}" {% if get_params.region == r.name %}checked{% endif %}>
-              {{ r.name }}
-            </label>
-          {% endfor %}
-        </div>
-
-        <div class="filter-block">
-          <h4>Активность</h4>
-          <select name="activity" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--color-border);">
-            <option value="">Любая</option>
-            {% for a in activities %}
-              <option value="{{ a.value }}" {% if get_params.activity == a.value %}selected{% endif %}>{{ a.label }}</option>
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Длительность</h3>
+          <ul class="catalog-filters__list">
+            {% for d in duration_filters %}
+              <li>
+                <label class="filter-check">
+                  <input type="checkbox" name="duration" value="{{ d.code }}"{% if d.code in duration_selected %} checked{% endif %}>
+                  <span class="filter-check__box" aria-hidden="true"></span>
+                  <span class="filter-check__label">{{ d.name }}</span>
+                </label>
+              </li>
             {% endfor %}
-          </select>
-        </div>
+          </ul>
+        </section>
 
-        <button type="submit" class="btn btn--primary" style="width:100%;">Применить</button>
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Дата</h3>
+          <div class="catalog-filters__date-range">
+            <label class="catalog-filters__date-cell">
+              <span class="catalog-filters__date-ph">с</span>
+              <input id="f-from" type="date" name="from" value="{{ get_params.from|default:'' }}">
+            </label>
+            <span class="catalog-filters__date-sep" aria-hidden="true"></span>
+            <label class="catalog-filters__date-cell">
+              <span class="catalog-filters__date-ph">По</span>
+              <input id="f-to" type="date" name="to" value="{{ get_params.to|default:'' }}">
+            </label>
+          </div>
+          <label class="filter-check catalog-filters__avail">
+            <input type="checkbox" name="avail" value="1"{% if get_params.avail == '1' %} checked{% endif %}>
+            <span class="filter-check__box" aria-hidden="true"></span>
+            <span class="filter-check__label">Сначала где есть места</span>
+          </label>
+        </section>
+
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Сезон</h3>
+          <ul class="catalog-filters__list catalog-filters__list--grid-2">
+            {% for s in seasons %}
+              <li>
+                <label class="filter-check">
+                  <input type="checkbox" name="season" value="{{ s.code }}"{% if s.code in season_selected %} checked{% endif %}>
+                  <span class="filter-check__box" aria-hidden="true"></span>
+                  <span class="filter-check__label">{{ s.name }}</span>
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Праздники</h3>
+          <ul class="catalog-filters__list catalog-filters__list--grid-2">
+            {% for h in holidays %}
+              <li>
+                <label class="filter-check">
+                  <input type="checkbox" name="holiday" value="{{ h.value }}"{% if h.value in holiday_selected %} checked{% endif %}>
+                  <span class="filter-check__box" aria-hidden="true"></span>
+                  <span class="filter-check__label">{{ h.label }}</span>
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        <hr class="catalog-filters__sep">
+
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Цена, ₽</h3>
+          <div class="catalog-filters__price-range">
+            <input id="pmin" type="number" name="priceMin" min="0" value="{{ get_params.priceMin|default:'' }}" placeholder="от 2 000" aria-label="Цена от">
+            <input id="pmax" type="number" name="priceMax" min="0" value="{{ get_params.priceMax|default:'' }}" placeholder="до 200 000" aria-label="Цена до">
+          </div>
+        </section>
+
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Направления</h3>
+          <ul class="catalog-filters__list" data-region-list>
+            <li>
+              <label class="filter-check">
+                <input type="radio" name="region" value=""{% if not get_params.region %} checked{% endif %}>
+                <span class="filter-check__box" aria-hidden="true"></span>
+                <span class="filter-check__label">Все направления</span>
+              </label>
+            </li>
+            {% for r in regions %}
+              <li class="{% if forloop.counter > 6 %}catalog-filters__item--collapsed{% endif %}">
+                <label class="filter-check">
+                  <input type="radio" name="region" value="{{ r.name }}"{% if get_params.region == r.name %} checked{% endif %}>
+                  <span class="filter-check__box" aria-hidden="true"></span>
+                  <span class="filter-check__label">{{ r.name }}</span>
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if regions|length > 6 %}
+            <button type="button" class="catalog-filters__more" data-region-toggle aria-expanded="false">
+              показать ещё {{ regions|length|add:"-6" }}
+            </button>
+          {% endif %}
+        </section>
+
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Активности</h3>
+          <ul class="catalog-filters__list">
+            <li>
+              <label class="filter-check">
+                <input type="radio" name="activity" value=""{% if not get_params.activity %} checked{% endif %}>
+                <span class="filter-check__box" aria-hidden="true"></span>
+                <span class="filter-check__label">Любая</span>
+              </label>
+            </li>
+            {% for a in activities %}
+              <li>
+                <label class="filter-check">
+                  <input type="radio" name="activity" value="{{ a.value }}"{% if get_params.activity == a.value %} checked{% endif %}>
+                  <span class="filter-check__box" aria-hidden="true"></span>
+                  <span class="filter-check__label">{{ a.label }}</span>
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Сложность</h3>
+          <ul class="catalog-filters__list">
+            {% for d in difficulty_filters %}
+              <li>
+                <label class="filter-check">
+                  <input type="checkbox" name="difficulty" value="{{ d.value }}"{% if d.value in difficulty_selected %} checked{% endif %}>
+                  <span class="filter-check__box" aria-hidden="true"></span>
+                  <span class="filter-check__label">{{ d.label }}</span>
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        {% if catalog_tags %}
+        <section class="catalog-filters__section">
+          <h3 class="catalog-filters__title">Теги</h3>
+          <ul class="catalog-filters__list catalog-filters__list--tags">
+            {% for t in catalog_tags %}
+              <li>
+                <a class="catalog-filters__tag{% if get_params.tag == t.name %} is-active{% endif %}" href="{% url 'tour-catalog' %}?{% query_update tag=t.name %}">{{ t.name }}</a>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+        {% endif %}
+
+        <section class="catalog-filters__section catalog-filters__section--search">
+          <h3 class="catalog-filters__title">Поиск</h3>
+          <input class="catalog-filters__search" type="search" name="q" placeholder="По названию тура" value="{{ get_params.q|default:'' }}">
+        </section>
+
+        <a class="catalog-filters__reset" href="{% url 'tour-catalog' %}">Сбросить фильтр</a>
       </form>
     </aside>
   </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+  <script src="{% static 'js/catalog_filters.js' %}" defer></script>
 {% endblock %}
