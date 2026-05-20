@@ -46,4 +46,20 @@
       setOpen(false);
     }
   });
+
+  if (document.body.classList.contains("page-home")) {
+    var hero = document.querySelector(".page-home-hero");
+
+    function updateHomeHeader() {
+      var threshold = 48;
+      if (hero) {
+        threshold = Math.max(48, hero.offsetHeight - header.offsetHeight - 24);
+      }
+      header.classList.toggle("is-scrolled", window.scrollY > threshold);
+    }
+
+    updateHomeHeader();
+    window.addEventListener("scroll", updateHomeHeader, { passive: true });
+    window.addEventListener("resize", updateHomeHeader);
+  }
 })();
